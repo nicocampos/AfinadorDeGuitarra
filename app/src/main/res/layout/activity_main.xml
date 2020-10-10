@@ -4,8 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="400dp"
     android:layout_height="match_parent"
-    android:background="@drawable/fondo_gris"
+    android:background="@drawable/background_2"
     android:orientation="vertical"
+    android:scrollbarThumbHorizontal="@android:color/background_dark"
+    android:scrollbarThumbVertical="@android:color/background_dark"
     tools:context=".MainActivity">
 
 
@@ -46,164 +48,149 @@
         android:id="@+id/btn_Sol"
         android:layout_width="66dp"
         android:layout_height="56dp"
+        android:layout_marginStart="272dp"
+        android:layout_marginBottom="284dp"
         android:background="@drawable/clavija_r"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.807"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.602" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/btn_Re"
         android:layout_width="57dp"
         android:layout_height="50dp"
+        android:layout_marginEnd="280dp"
+        android:layout_marginBottom="284dp"
         android:background="@drawable/clavija_l"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.179"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.603" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
         android:id="@+id/btn_La"
         android:layout_width="57dp"
         android:layout_height="50dp"
+        android:layout_marginEnd="280dp"
+        android:layout_marginBottom="204dp"
         android:background="@drawable/clavija_l"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.18"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.71000004" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
         android:id="@+id/btn_MiGrave"
         android:layout_width="57dp"
         android:layout_height="50dp"
+        android:layout_marginEnd="288dp"
+        android:layout_marginBottom="128dp"
         android:background="@drawable/clavija_l"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.153"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.82" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
         android:id="@+id/btn_Si"
         android:layout_width="66dp"
         android:layout_height="56dp"
+        android:layout_marginStart="264dp"
+        android:layout_marginBottom="204dp"
         android:background="@drawable/clavija_r"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.778"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.717" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/btn_MiAgudo"
         android:layout_width="66dp"
         android:layout_height="56dp"
+        android:layout_marginStart="264dp"
+        android:layout_marginBottom="124dp"
         android:background="@drawable/clavija_r"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.79"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.83" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <ImageView
         android:id="@+id/imageView_A"
         android:layout_width="55dp"
         android:layout_height="55dp"
+        android:layout_marginEnd="344dp"
+        android:layout_marginBottom="204dp"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.717"
         app:srcCompat="@drawable/a" />
 
     <ImageView
         android:id="@+id/imageView_D"
         android:layout_width="55dp"
         android:layout_height="55dp"
+        android:layout_marginEnd="344dp"
+        android:layout_marginBottom="284dp"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.6"
         app:srcCompat="@drawable/d" />
 
     <ImageView
         android:id="@+id/imageView_Egrave"
         android:layout_width="55dp"
         android:layout_height="55dp"
+        android:layout_marginEnd="344dp"
+        android:layout_marginBottom="124dp"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.831"
         app:srcCompat="@drawable/e" />
 
     <ImageView
         android:id="@+id/imageView_Eagudo"
         android:layout_width="55dp"
         android:layout_height="55dp"
+        android:layout_marginStart="331dp"
+        android:layout_marginBottom="124dp"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.831"
         app:srcCompat="@drawable/e" />
 
     <ImageView
         android:id="@+id/imageView_B"
         android:layout_width="55dp"
         android:layout_height="55dp"
+        android:layout_marginStart="331dp"
+        android:layout_marginBottom="204dp"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.715"
         app:srcCompat="@drawable/b" />
 
     <ImageView
         android:id="@+id/imageView_G"
         android:layout_width="55dp"
         android:layout_height="55dp"
+        android:layout_marginStart="331dp"
+        android:layout_marginBottom="284dp"
         android:contentDescription="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.6"
         app:srcCompat="@drawable/g" />
 
     <EditText
         android:id="@+id/editText_frec"
         android:layout_width="130dp"
         android:layout_height="46dp"
+        android:autoText="false"
+        android:backgroundTint="@android:color/background_dark"
+        android:clickable="false"
+        android:cursorVisible="false"
+        android:duplicateParentState="false"
+        android:editable="false"
         android:ems="10"
+        android:enabled="false"
         android:inputType="textPersonName"
+        android:textColor="#0C0909"
+        android:textColorHint="#000000"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.483"

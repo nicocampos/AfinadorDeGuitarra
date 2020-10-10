@@ -14,9 +14,11 @@ import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Process;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.github.mikephil.charting.charts.LineChart;
@@ -53,32 +55,39 @@ public class MainActivity extends AppCompatActivity {
     private boolean bool_btn_re  = false;
     private boolean bool_btn_sol = false;
 
-    // botones
-    private Button btn_Miagudo;
-    private Button btn_Migrave;
-    private Button btn_Si;
-    private Button btn_La;
-    private Button btn_Sol;
-    private Button btn_Re;
+
+    // Imagenes
+    private ImageView img_mia;
+    private ImageView img_mig;
+    private ImageView img_si;
+    private ImageView img_la;
+    private ImageView img_sol;
+    private ImageView img_re;
 
     // Los valores fueron sacados de internet
     // midiendo con un analizador para celu
     // sacado de google play. Nombre "FFT Spectrum"
     // link de la pagina de notas afinadas: https://www.guitarristas.info/tutoriales/como-afinar-guitarra-todo-sobre-afinacion/2787
     // El valor del delta lo puse en 10 para probar. Lo mismo con el ruido.
-    private int DELTA   = 10;   //Hz
-    private int RUIDO   = 200;   //Hz
-    private int NOTAMIA = 2308; //Hz
-    private int NOTASI  = 495; //Hz
-    private int NOTASOL = 393; //Hz
-    private int NOTARE  = 441; //Hz
-    private int NOTALA  = 332; //Hz
-    private int NOTAMIG = 248; //Hz
+    private float DELTA   = 2.0f;         //Hz
+    private float RUIDO   = 50.0f;         //Hz
+    private float NOTAMIA = 329.63f; //(float) 329.63;       //2308; //Hz
+    private float NOTASI  = 246.94f;       //495; //Hz
+    private float NOTASOL = 196.0f; // (float) 196.00;       //393; //Hz ----- armonico en 392
+    private float NOTARE  = 146.83f;       //441; //Hz
+    private float NOTALA  = 110.0f; //(float) 110.00;       //332; //Hz  ----- armonico en 330
+    private float NOTAMIG = 82.41f;        //248; //Hz
+
+
     // Con este flag avisamos que hay data nueva a la FFT, es un semaforo mal hecho
     boolean buffer_ready = false;
 
-    private float freq = 0;
-    private int POTENCIA_MIN = 280;
+    //private float freq = 0.0f;
+    //private float freq_armonico = 0.0f;
+    private float fundamental_freq = 0.0f;
+    //private float PASOS95 = 1.0120f;
+    private float PASOS = 2.3530150f;
+
 
     // Defino los buffers, potencia de 2 para mas placer y por la FFT
     private int POW_FREC_SHOW = 11;
@@ -87,6 +96,8 @@ public class MainActivity extends AppCompatActivity {
     private int BUFFER_SIZE_SHOW_FREQ = (int) Math.pow(2,POW_FREC_SHOW);
     private int BUFFER_SIZE = (int) Math.pow(2,POW_FFT_BUFFER);
     private float[] buffFrec = new float[BUFFER_SIZE_SHOW_FREQ];
+
+    private float[] hanning = new float[BUFFER_SIZE];
 
     //---------------------------------------------------------------------------------------
     //-------------------------- Libreria FFT JAVA ------------------------------------------
@@ -104,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
     //-------------------------- Captura de audio -------------------------------------------
     //---------------------------------------------------------------------------------------
     // Declaramos la clase para grabar audio
-    private AudioRecord ar = null;
+    AudioRecord recorder = null;
     private int SAMPLE_RATE = 44100; // en Hz
     //private int SAMPLE_RATE = getMinSupportedSampleRate(); // en Hz
     // Buffer donde sale el valor crudo del microfono
@@ -118,14 +129,6 @@ public class MainActivity extends AppCompatActivity {
     // Para que esto ande debemos poner la ependencia en "build.gradle (Module: app)" :
     // dentro de "dependencies" ponemos:
     // implementation 'com.github.PhilJay:MPAndroidChart:v2.2.4'
-
-    // Cada cuanto refrescamos el plot, lo calculamos en funcion del tamaño de los buffers
-    // y la frecuencia de muestreo
-    private int PLOTS_REFRESH_MS;
-    // Esta variable la uso para recorrer la salida del microfono
-    private int buffer_counter = 0;
-
-    //  Creamos las clases del grafico de tiempo
 
     // Creamos las clases del grafico de FFT
     private LineChart grafico_frecuencia;
@@ -170,14 +173,24 @@ public class MainActivity extends AppCompatActivity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         //------------------------------------------------------------------------------------------
+        //----------------------- Imagenes ----------------------------------------------------------
+        //------------------------------------------------------------------------------------------
+        img_la  = findViewById(R.id.imageView_A);
+        img_si  = findViewById(R.id.imageView_B);
+        img_re  = findViewById(R.id.imageView_D);
+        img_sol = findViewById(R.id.imageView_G);
+        img_mia = findViewById(R.id.imageView_Eagudo);
+        img_mig = findViewById(R.id.imageView_Egrave);
+
+        //------------------------------------------------------------------------------------------
         //----------------------- Botones ----------------------------------------------------------
         //------------------------------------------------------------------------------------------
-        btn_Miagudo = findViewById(R.id.btn_MiAgudo);
-        btn_Migrave = findViewById(R.id.btn_MiGrave);
-        btn_Si      = findViewById(R.id.btn_Si);
-        btn_La      = findViewById(R.id.btn_La);
-        btn_Sol     = findViewById(R.id.btn_Sol);
-        btn_Re      = findViewById(R.id.btn_Re);
+        final Button btn_Miagudo = findViewById(R.id.btn_MiAgudo);
+        final Button btn_Migrave = findViewById(R.id.btn_MiGrave);
+        final Button btn_Si      = findViewById(R.id.btn_Si);
+        final Button btn_La      = findViewById(R.id.btn_La);
+        final Button btn_Sol     = findViewById(R.id.btn_Sol);
+        final Button btn_Re      = findViewById(R.id.btn_Re);
 
         //------------------------------------------------------------------------------------------
         //----------------------- Acciones de los botones ----------------------------------------------------------
@@ -230,22 +243,44 @@ public class MainActivity extends AppCompatActivity {
         //------------------------------------------------------------------------------------------
         ActivityCompat.requestPermissions(this, permissions, REQUEST_RECORD_AUDIO_PERMISSION);
 
+        // Creamos el grabador
+        recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_DEFAULT,
+                AudioFormat.ENCODING_PCM_16BIT,
+                BUFFER_SIZE);
+
         //------------------------------------------------------------------------------------------
-        //-------------------------- INICIALIZO LOS GRAFICOS ---------------------------------------
+        //------------------------- HANNING - VENTANA ----------------------------------------------
         //------------------------------------------------------------------------------------------
-        // Llenamos el buffer con el mapeo de frecuencias
-        double aux = 1000;
+        for(int i = 0; i < BUFFER_SIZE ; i++)
+        {
+            // Funcion sacada de MATLAB
+            hanning[i] =(float)( 0.5 - (0.5 * Math.cos( (2*Math.PI*i) / (BUFFER_SIZE-1) )) );
+        }
+
+        //------------------------------------------------------------------------------------------
+        //------------------ Llenamos el buffer con el mapeo de frecuencias ------------------------
+        //------------------------------------------------------------------------------------------
         buffFrec[0]=0;
         for(int i=1;i<BUFFER_SIZE_SHOW_FREQ;i++)
         {
             // El valor 2,353 se saco de manera expiremental midiendo distintas
             // frecuencias y ajustando hasta tener un valor aceptable.
-            buffFrec[i] = (float) (buffFrec[i-1] + (2353/aux));
+            buffFrec[i] = buffFrec[i-1] + (PASOS);
+
         }
+
+
+        //------------------------------------------------------------------------------------------
+        //-------------------------- INICIALIZO LOS GRAFICOS ---------------------------------------
+        //------------------------------------------------------------------------------------------
+
+
         // Llenamos los buffers de señal a plotear con nada...
         for(int i=0;i<BUFFER_SIZE_SHOW_FREQ;i++)
         {
-            LineEntry_frecuencia.add(new Entry(0.0f, i));
+            LineEntry_frecuencia.add(new Entry(0.0f, i));//(int)buffFrec[i]));
             labels_frecuencia.add(String.valueOf(i));
         }
         // Cargamos los datos en la clase que grafica
@@ -376,26 +411,23 @@ public class MainActivity extends AppCompatActivity {
         if (buffer_ready)
         {
 
-            long startTime = System.currentTimeMillis();
-
             // Pasamos a double como quiere la clase FFT
             for (int i = 0; i < BUFFER_SIZE; i++)
             {
-                buffer_double[i] = buffer[i];
+                buffer_double[i] = buffer[i]*hanning[i];    // Aca estoy aplicando la ventana
             }
 
             // HAcemos la FFT. La salida va a estar en el mismo buffer. Solo saca la parte
             // real (izquierda) de la FFT, intercalando la salida real y la imaginaria.
             fft.realForward(buffer_double);
 
-            //time_exe = System.currentTimeMillis() - startTime;
 
             // Actualizo plot
             updateFFT_values();
 
             // Actualizo Frecuencia
             final TextView mostrarFrec = findViewById(R.id.editText_frec);
-            mostrarFrec.setText(freq+"Hz");
+            mostrarFrec.setText(fundamental_freq+"Hz");
 
             // Comparo contra la nota seteada
             NotaCmp();
@@ -413,6 +445,7 @@ public class MainActivity extends AppCompatActivity {
         // obtenemos el modulo y mostramos en el grafico de FFT
         int buffer_mod_count = 0;
         double value_max = 0;
+
         for (int i = 0; i < BUFFER_SIZE_SHOW_FREQ; i++)
         {
             // calculamos el modulo
@@ -420,16 +453,10 @@ public class MainActivity extends AppCompatActivity {
 
             aux_mod = 20*log(aux_mod);
 
-            // Reduzco el ruido 100 veces para apreciar mejor
-            // los picos
-            if(aux_mod < POTENCIA_MIN){
-                aux_mod = aux_mod/100;
-            }
-
             // Valor maximo
             if(value_max < aux_mod){
                 value_max = aux_mod;
-                freq = buffFrec[i];
+                //fundamental_freq = buffFrec[i];
             }
 
             // Adelantamos el index del buffer con un paso grande, submuestreando la salida real
@@ -442,6 +469,9 @@ public class MainActivity extends AppCompatActivity {
             dataSet_frec.addEntry(new Entry((float) aux_mod, i));
         }
 
+        // Encuentro los picos
+        findPeaks();
+
         // Actualizamos el dataset
         data_frec.removeDataSet(0);
         data_frec.addDataSet(dataSet_frec);
@@ -452,11 +482,57 @@ public class MainActivity extends AppCompatActivity {
         dataSet_frec.notifyDataSetChanged();
         grafico_frecuencia.invalidate();
 
-        // Actualizo el texto del tiempo de calculo
-        //final TextView texto_tiempo = findViewById(R.id.text_time);
-        //texto_tiempo.setText("Tiempo calc. = "+time_exe+" ms");
+    }
+
+    //----------------------------------------------------------------------------------------------
+    //------------------------------ ENCUENTRO PICOS Y SACO FUNDAMENTAL ----------------------------
+    //----------------------------------------------------------------------------------------------
+    private void findPeaks()
+    {
+        int buffer_mod_count = 0;
+        float value_max = 0.0f;
+        float freq = 0.0f;
+        float buff_data[] = new float[BUFFER_SIZE_SHOW_FREQ/2];
+        float buff_freq[] = new float[BUFFER_SIZE_SHOW_FREQ/2];
+
+        // Guardo los picos
+        for (int i = 0, j=0; i < BUFFER_SIZE_SHOW_FREQ; i++)
+        {
+            // calculamos el modulo
+            double aux_mod = sqrt(buffer_double[buffer_mod_count]*buffer_double[buffer_mod_count] + buffer_double[buffer_mod_count+1]*buffer_double[buffer_mod_count+1]);
+
+            aux_mod = 20*log(aux_mod);
+
+            // Valor maximo
+            if( aux_mod > 260) {
+                if (value_max < aux_mod) {
+                    value_max = (float) aux_mod;
+                    freq = buffFrec[i];
+                } else {
+                    buff_data[j] = value_max;
+                    buff_freq[j] = freq;
+                    value_max = 0;
+                    j++;
+                }
+            }
+
+
+            buffer_mod_count += 2^(POW_FFT_BUFFER-POW_FREC_SHOW);
+        }
+
+
+
+        fundamental_freq = Math.abs(buff_freq[1] - buff_freq[0]);
+
+        Log.d("Primera Frecuencia", buff_freq[0]+"");
+        Log.d("Segunda Frecuencia", buff_freq[1]+"");
+        Log.d("Tercera Frecuencia", buff_freq[2]+"");
+        Log.d("Cuarta Frecuencia", buff_freq[3]+"");
+        Log.d("Quinta Frecuencia", buff_freq[4]+"");
+
 
     }
+
 
     //----------------------------------------------------------------------------------------------
     //------------------------------ CAPTURAR AUDIO ------------------------------------------------
@@ -466,17 +542,12 @@ public class MainActivity extends AppCompatActivity {
 
         // Seteamos la prioridad
         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
-        AudioRecord recorder = null;
+
 
         // intentamos crear el grabador de audio y grabar...
         try {
 
-            // Creamos el grabador
-            recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
-                    SAMPLE_RATE,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    BUFFER_SIZE);
+
 
             // Empezamos a grabar
             recorder.startRecording();
@@ -501,90 +572,93 @@ public class MainActivity extends AppCompatActivity {
     private void NotaCmp(){
 
         // Mi Agudo
-        if(bool_btn_miA && freq < NOTAMIA+DELTA && freq > NOTAMIA-DELTA)
-            btn_Miagudo.setBackgroundResource(R.drawable.e_verde);
+        if(bool_btn_miA && fundamental_freq < NOTAMIA+DELTA && fundamental_freq > NOTAMIA-DELTA)
+            img_mia.setBackgroundResource(R.drawable.e_verde);
         else {
-            if (bool_btn_miA && freq < RUIDO)
-                btn_Miagudo.setBackgroundResource(R.drawable.e);
+            if (bool_btn_miA && fundamental_freq < RUIDO)
+                img_mia.setBackgroundResource(R.drawable.e);
             else {
                 if(!bool_btn_miA)
-                    btn_Miagudo.setBackgroundResource(R.drawable.e);
+                    img_mia.setBackgroundResource(R.drawable.e);
                 else
-                    btn_Miagudo.setBackgroundResource(R.drawable.e_rojo);
+                    img_mia.setBackgroundResource(R.drawable.e_rojo);
             }
         }
 
         // Si
-        if(bool_btn_si && freq < NOTASI+DELTA && freq > NOTASI-DELTA)
-            btn_Si.setBackgroundResource(R.drawable.b_verde);
+        if(bool_btn_si && fundamental_freq < NOTASI+DELTA && fundamental_freq > NOTASI-DELTA)
+            img_si.setBackgroundResource(R.drawable.b_verde);
         else {
-            if (bool_btn_si && freq < RUIDO)
-                btn_Si.setBackgroundResource(R.drawable.b);
+            if (bool_btn_si && fundamental_freq < RUIDO)
+                img_si.setBackgroundResource(R.drawable.b);
             else {
                 if(!bool_btn_si)
-                    btn_Si.setBackgroundResource(R.drawable.b);
+                    img_si.setBackgroundResource(R.drawable.b);
                 else
-                    btn_Si.setBackgroundResource(R.drawable.b_rojo);
+                    img_si.setBackgroundResource(R.drawable.b_rojo);
             }
         }
 
         // Sol
-        if(bool_btn_sol && freq < NOTASOL+DELTA && freq > NOTASOL-DELTA)
-            btn_Sol.setBackgroundResource(R.drawable.g_verde);
+        if(bool_btn_sol && fundamental_freq < NOTASOL+DELTA && fundamental_freq > NOTASOL-DELTA)
+            img_sol.setBackgroundResource(R.drawable.g_verde);
         else {
-            if (bool_btn_sol && freq < RUIDO)
-                btn_Sol.setBackgroundResource(R.drawable.g);
+            if (bool_btn_sol && fundamental_freq < RUIDO)
+                img_sol.setBackgroundResource(R.drawable.g);
             else {
                 if(!bool_btn_sol)
-                    btn_Sol.setBackgroundResource(R.drawable.g);
+                    img_sol.setBackgroundResource(R.drawable.g);
                 else
-                    btn_Sol.setBackgroundResource(R.drawable.g_rojo);
+                    img_sol.setBackgroundResource(R.drawable.g_rojo);
             }
         }
 
         // Re
-        if(bool_btn_re && freq < NOTARE+DELTA && freq > NOTARE-DELTA)
-            btn_Re.setBackgroundResource(R.drawable.d_verde);
+        if(bool_btn_re && fundamental_freq < NOTARE+DELTA && fundamental_freq > NOTARE-DELTA)
+            img_re.setBackgroundResource(R.drawable.d_verde);
         else {
-            if (bool_btn_re && freq < RUIDO)
-                btn_Re.setBackgroundResource(R.drawable.d);
+            if (bool_btn_re && fundamental_freq < RUIDO)
+                img_re.setBackgroundResource(R.drawable.d);
             else {
                 if(!bool_btn_re)
-                    btn_Re.setBackgroundResource(R.drawable.d);
+                    img_re.setBackgroundResource(R.drawable.d);
                 else
-                    btn_Re.setBackgroundResource(R.drawable.d_rojo);
+                    img_re.setBackgroundResource(R.drawable.d_rojo);
             }
         }
 
         // La
-        if(bool_btn_miA && freq < NOTALA+DELTA && freq > NOTALA-DELTA)
-            btn_La.setBackgroundResource(R.drawable.a_verde);
+        if(bool_btn_la && fundamental_freq < NOTALA+DELTA && fundamental_freq > NOTALA-DELTA)
+            img_la.setBackgroundResource(R.drawable.a_verde);
         else {
-            if (bool_btn_la && freq < RUIDO)
-                btn_La.setBackgroundResource(R.drawable.a);
+            if (bool_btn_la && fundamental_freq < RUIDO)
+                img_la.setBackgroundResource(R.drawable.a);
             else {
                 if(!bool_btn_la)
-                    btn_La.setBackgroundResource(R.drawable.a);
+                    img_la.setBackgroundResource(R.drawable.a);
                 else
-                    btn_La.setBackgroundResource(R.drawable.a_rojo);
+                    img_la.setBackgroundResource(R.drawable.a_rojo);
             }
         }
 
         // Mi Grave
-        if(bool_btn_miG && freq < NOTAMIG+DELTA && freq > NOTAMIG-DELTA)
-            btn_Migrave.setBackgroundResource(R.drawable.e_verde);
+        if(bool_btn_miG && fundamental_freq < NOTAMIG+DELTA && fundamental_freq > NOTAMIG-DELTA)
+            img_mig.setBackgroundResource(R.drawable.e_verde);
         else {
-            if (bool_btn_miG && freq < RUIDO)
-                btn_Migrave.setBackgroundResource(R.drawable.e);
+            if (bool_btn_miG && fundamental_freq < RUIDO)
+                img_mig.setBackgroundResource(R.drawable.e);
             else {
                 if(!bool_btn_miG)
-                    btn_Migrave.setBackgroundResource(R.drawable.e);
+                    img_mig.setBackgroundResource(R.drawable.e);
+
                 else
-                    btn_Migrave.setBackgroundResource(R.drawable.e_rojo);
+                    img_mig.setBackgroundResource(R.drawable.e_rojo);
             }
         }
 
 
     }
+
+
 
 }
