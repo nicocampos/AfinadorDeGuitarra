@@ -17,9 +17,12 @@ import android.os.Process;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
@@ -64,29 +67,32 @@ public class MainActivity extends AppCompatActivity {
     private ImageView img_sol;
     private ImageView img_re;
 
+    // bool para switch
+    private boolean bool_auto = false;
+
     // Los valores fueron sacados de internet
     // midiendo con un analizador para celu
     // sacado de google play. Nombre "FFT Spectrum"
-    // link de la pagina de notas afinadas: https://www.guitarristas.info/tutoriales/como-afinar-guitarra-todo-sobre-afinacion/2787
+    // link de la pagina de notas afinadas: https://tuner-online.com/es/
     // El valor del delta lo puse en 10 para probar. Lo mismo con el ruido.
     private float DELTA   = 2.0f;         //Hz
-    private float RUIDO   = 50.0f;         //Hz
-    private float NOTAMIA = 329.63f; //(float) 329.63;       //2308; //Hz
-    private float NOTASI  = 246.94f;       //495; //Hz
-    private float NOTASOL = 196.0f; // (float) 196.00;       //393; //Hz ----- armonico en 392
-    private float NOTARE  = 146.83f;       //441; //Hz
-    private float NOTALA  = 110.0f; //(float) 110.00;       //332; //Hz  ----- armonico en 330
-    private float NOTAMIG = 82.41f;        //248; //Hz
+    private float RUIDO   = 50.0f;        //Hz
+    private float NOTAMIA = 329.63f;      //Hz
+    private float NOTASI  = 246.94f;      //Hz
+    private float NOTASOL = 196.0f;       //Hz
+    private float NOTARE  = 146.83f;      //Hz
+    private float NOTALA  = 110.0f;       //Hz
+    private float NOTAMIG = 82.41f;       //Hz
 
 
     // Con este flag avisamos que hay data nueva a la FFT, es un semaforo mal hecho
     boolean buffer_ready = false;
 
-    //private float freq = 0.0f;
-    //private float freq_armonico = 0.0f;
     private float fundamental_freq = 0.0f;
-    //private float PASOS95 = 1.0120f;
-    private float PASOS = 2.3530150f;
+    private int NIVELMINIMO = 250;
+//    private float PASOS = 0.33674762f;    // pasos para 1024
+    private float PASOS = 0.336499f;        // pasos para 2048
+    private float FRECUENCIA_MIN = 80; //Hz
 
 
     // Defino los buffers, potencia de 2 para mas placer y por la FFT
@@ -117,7 +123,6 @@ public class MainActivity extends AppCompatActivity {
     // Declaramos la clase para grabar audio
     AudioRecord recorder = null;
     private int SAMPLE_RATE = 44100; // en Hz
-    //private int SAMPLE_RATE = getMinSupportedSampleRate(); // en Hz
     // Buffer donde sale el valor crudo del microfono
     short[] buffer = new short[BUFFER_SIZE];
 
@@ -183,6 +188,25 @@ public class MainActivity extends AppCompatActivity {
         img_mig = findViewById(R.id.imageView_Egrave);
 
         //------------------------------------------------------------------------------------------
+        //------------------------------- Switch ---------------------------------------------------
+        //------------------------------------------------------------------------------------------
+        final Switch switch_auto = findViewById(R.id.sw_auto);
+        switch_auto.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+           public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+               if (isChecked) {
+                   bool_auto = true;
+                   bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = false;
+                   Toast.makeText(getApplicationContext(), "Modo Automatico", Toast.LENGTH_SHORT).show();
+               } else {
+                   bool_auto = false;
+                   bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = false;
+                   FRECUENCIA_MIN = NOTAMIG-2.41f;
+                   Toast.makeText(getApplicationContext(), "Modo Manual", Toast.LENGTH_SHORT).show();
+               }
+           }
+       });
+
+        //------------------------------------------------------------------------------------------
         //----------------------- Botones ----------------------------------------------------------
         //------------------------------------------------------------------------------------------
         final Button btn_Miagudo = findViewById(R.id.btn_MiAgudo);
@@ -198,37 +222,61 @@ public class MainActivity extends AppCompatActivity {
         btn_Miagudo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(bool_auto)
+                    return;
                 bool_btn_miA = true; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = false;
+                Toast.makeText(getApplicationContext(), "Nota MI(E) seleccionada", Toast.LENGTH_SHORT).show();
+                FRECUENCIA_MIN = NOTAMIA - 5*DELTA;
             }
         });
         btn_La.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(bool_auto)
+                    return;
                 bool_btn_miA = false; bool_btn_la = true; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = false;
+                Toast.makeText(getApplicationContext(), "Nota LA(A) seleccionada", Toast.LENGTH_SHORT).show();
+                FRECUENCIA_MIN = NOTALA - 5*DELTA;
             }
         });
         btn_Migrave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(bool_auto)
+                    return;
                 bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = true; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = false;
+                Toast.makeText(getApplicationContext(), "Nota MI(E) seleccionada", Toast.LENGTH_SHORT).show();
+                FRECUENCIA_MIN = NOTAMIG - 5*DELTA;
             }
         });
         btn_Re.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(bool_auto)
+                    return;
                 bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = true; bool_btn_si = false; bool_btn_sol = false;
+                Toast.makeText(getApplicationContext(), "Nota RE(D) seleccionada", Toast.LENGTH_SHORT).show();
+                FRECUENCIA_MIN = NOTARE - 5*DELTA;
             }
         });
         btn_Si.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(bool_auto)
+                    return;
                 bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = true; bool_btn_sol = false;
+                Toast.makeText(getApplicationContext(), "Nota SI(B) seleccionada", Toast.LENGTH_SHORT).show();
+                FRECUENCIA_MIN = NOTASI - 5*DELTA;
             }
         });
         btn_Sol.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(bool_auto)
+                    return;
                 bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = true;
+                Toast.makeText(getApplicationContext(), "Nota SOL(G) seleccionada", Toast.LENGTH_SHORT).show();
+                FRECUENCIA_MIN = NOTASOL - 5*DELTA;
             }
         });
 
@@ -247,6 +295,7 @@ public class MainActivity extends AppCompatActivity {
         recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_DEFAULT,
+//                AudioFormat.ENCODING_PCM_16BIT,
                 AudioFormat.ENCODING_PCM_16BIT,
                 BUFFER_SIZE);
 
@@ -281,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
         for(int i=0;i<BUFFER_SIZE_SHOW_FREQ;i++)
         {
             LineEntry_frecuencia.add(new Entry(0.0f, i));//(int)buffFrec[i]));
-            labels_frecuencia.add(String.valueOf(i));
+            labels_frecuencia.add(String.valueOf(buffFrec[i]));
         }
         // Cargamos los datos en la clase que grafica
         dataSet_frec = new LineDataSet(LineEntry_frecuencia, "Frecuencia");
@@ -440,6 +489,7 @@ public class MainActivity extends AppCompatActivity {
     //----------------------------------------------------------------------------------------------
     //------------------------------ Actualizar grafico FFT ----------------------------------------
     //----------------------------------------------------------------------------------------------
+    private float buffer_aux[] = new float[BUFFER_SIZE_SHOW_FREQ];
     private void updateFFT_values()
     {
         // obtenemos el modulo y mostramos en el grafico de FFT
@@ -449,28 +499,29 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < BUFFER_SIZE_SHOW_FREQ; i++)
         {
             // calculamos el modulo
-            double aux_mod = sqrt(buffer_double[buffer_mod_count]*buffer_double[buffer_mod_count] + buffer_double[buffer_mod_count+1]*buffer_double[buffer_mod_count+1]);
+            double aux_mod = sqrt(buffer_double[i]*buffer_double[i] + buffer_double[i+1]*buffer_double[i+1]);
 
             aux_mod = 20*log(aux_mod);
-
-            // Valor maximo
-            if(value_max < aux_mod){
-                value_max = aux_mod;
-                //fundamental_freq = buffFrec[i];
-            }
+            buffer_aux[i] = (float)aux_mod;
 
             // Adelantamos el index del buffer con un paso grande, submuestreando la salida real
             // asi no colgamos el grafico con muchos puntos.
-            buffer_mod_count += 2^(POW_FFT_BUFFER-POW_FREC_SHOW);
+            if(i == buffer_mod_count){
+                buffer_mod_count += 2^(3);
 
-            // Borramos el dato
-            dataSet_frec.removeFirst();
-            // Agregamos un nuevo
-            dataSet_frec.addEntry(new Entry((float) aux_mod, i));
+                // Borramos el dato
+                dataSet_frec.removeFirst();
+                // Agregamos un nuevo
+                dataSet_frec.addEntry(new Entry((float) aux_mod, i));
+            }
         }
 
-        // Encuentro los picos
+        // Encuentro los picos y calcula la fundamental
         findPeaks();
+
+        // En modo automatico busca una frecuencia cercana a
+        // alguna nota
+        autoDetect();
 
         // Actualizamos el dataset
         data_frec.removeDataSet(0);
@@ -489,50 +540,79 @@ public class MainActivity extends AppCompatActivity {
     //----------------------------------------------------------------------------------------------
     private void findPeaks()
     {
-        int buffer_mod_count = 0;
-        float value_max = 0.0f;
-        float freq = 0.0f;
-        float buff_data[] = new float[BUFFER_SIZE_SHOW_FREQ/2];
+        int len_freq = 0;
         float buff_freq[] = new float[BUFFER_SIZE_SHOW_FREQ/2];
 
-        // Guardo los picos
-        for (int i = 0, j=0; i < BUFFER_SIZE_SHOW_FREQ; i++)
-        {
-            // calculamos el modulo
-            double aux_mod = sqrt(buffer_double[buffer_mod_count]*buffer_double[buffer_mod_count] + buffer_double[buffer_mod_count+1]*buffer_double[buffer_mod_count+1]);
-
-            aux_mod = 20*log(aux_mod);
-
-            // Valor maximo
-            if( aux_mod > 260) {
-                if (value_max < aux_mod) {
-                    value_max = (float) aux_mod;
-                    freq = buffFrec[i];
-                } else {
-                    buff_data[j] = value_max;
-                    buff_freq[j] = freq;
-                    value_max = 0;
-                    j++;
+        for(int i = 1; i < buffer_aux.length-1 ; i++){
+            if( (buffer_aux[i] - buffer_aux[i-1]) > 0 && (buffer_aux[i+1] - buffer_aux[i]) <= 0 ){
+                if(buffer_aux[i] > NIVELMINIMO){
+                    buff_freq[len_freq] = buffFrec[i];
+                    len_freq++;
                 }
             }
-
-
-            buffer_mod_count += 2^(POW_FFT_BUFFER-POW_FREC_SHOW);
         }
 
+        // Busco alguna diferencia significativa entre armonicos
+        // con la Frecuencia minima que esta seteada en 80 Hz
+        // ya que la nota de menor frecuencia esta en 82.41 Hz
+        // new: La frecuencia en 80Hz es para modo automatico
+        // en modo manual se setea una frecuenia de 10 Hz menor
+        // a la frecuencia de la nota seleccionada
+        for(int i = 0; i < len_freq-1; i++){
+            if(Math.abs(buff_freq[i+1] - buff_freq[i]) > FRECUENCIA_MIN){
+                fundamental_freq = Math.abs(buff_freq[i+1] - buff_freq[i]);
+                i = len_freq;
+            }
+            else{
+                fundamental_freq = 0;
+            }
+        }
+        if(len_freq == 0)
+            fundamental_freq = 0;
 
 
-        fundamental_freq = Math.abs(buff_freq[1] - buff_freq[0]);
-
-        Log.d("Primera Frecuencia", buff_freq[0]+"");
-        Log.d("Segunda Frecuencia", buff_freq[1]+"");
-        Log.d("Tercera Frecuencia", buff_freq[2]+"");
-        Log.d("Cuarta Frecuencia", buff_freq[3]+"");
-        Log.d("Quinta Frecuencia", buff_freq[4]+"");
+//        Log.d("1 Frecuencia", buff_freq[0]+"");
+//        Log.d("2 Frecuencia", buff_freq[1]+"");
+//        Log.d("3 Frecuencia", buff_freq[2]+"");
+//        Log.d("4 Frecuencia", buff_freq[3]+"");
+//        Log.d("5 Frecuencia", buff_freq[5]+"");
+//        Log.d("6 Frecuencia", buff_freq[6]+"");
+//        Log.d("7 Frecuencia", buff_freq[7]+"");
+//        Log.d("8 Frecuencia", buff_freq[8]+"");
+//        Log.d("9 Frecuencia", buff_freq[9]+"");
+//        Log.d("FIN........", "................");
 
 
     }
 
+    //----------------------------------------------------------------------------------------------
+    //------------------------------ ENCUENTRO FRECUENCIA EN MODO AUTO -----------------------------
+    //----------------------------------------------------------------------------------------------
+    private void autoDetect()
+    {
+        // Si no esta en modo automatico no hago nada
+        if(!bool_auto)
+            return;
+
+        if(fundamental_freq < NOTAMIA+DELTA && fundamental_freq > NOTAMIA-DELTA) {
+            bool_btn_miA = true; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = false;
+        }
+        if(fundamental_freq < NOTASI+DELTA && fundamental_freq > NOTASI-DELTA) {
+            bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = true; bool_btn_sol = false;
+        }
+        if(fundamental_freq < NOTASOL+DELTA && fundamental_freq > NOTASOL-DELTA) {
+            bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = true;
+        }
+        if(fundamental_freq < NOTARE+DELTA && fundamental_freq > NOTARE-DELTA) {
+            bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = false; bool_btn_re = true; bool_btn_si = false; bool_btn_sol = false;
+        }
+        if(fundamental_freq < NOTALA+DELTA && fundamental_freq > NOTALA-DELTA) {
+            bool_btn_miA = false; bool_btn_la = true; bool_btn_miG = false; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = false;
+        }
+        if(fundamental_freq < NOTAMIG+DELTA && fundamental_freq > NOTAMIG-DELTA) {
+            bool_btn_miA = false; bool_btn_la = false; bool_btn_miG = true; bool_btn_re = false; bool_btn_si = false; bool_btn_sol = false;
+        }
+    }
 
     //----------------------------------------------------------------------------------------------
     //------------------------------ CAPTURAR AUDIO ------------------------------------------------
@@ -546,8 +626,6 @@ public class MainActivity extends AppCompatActivity {
 
         // intentamos crear el grabador de audio y grabar...
         try {
-
-
 
             // Empezamos a grabar
             recorder.startRecording();
@@ -563,17 +641,19 @@ public class MainActivity extends AppCompatActivity {
 
             }
         } catch(Throwable x) {
-            //Log.w(TAG,"Error reading voice audio",x);
+            Log.w("Error Audio: ","Error reading voice audio",x);
         } finally {
             //close();
         }
     }
 
-    private void NotaCmp(){
-
+    private void NotaCmp()
+    {
         // Mi Agudo
-        if(bool_btn_miA && fundamental_freq < NOTAMIA+DELTA && fundamental_freq > NOTAMIA-DELTA)
+        if(bool_btn_miA && fundamental_freq < NOTAMIA+DELTA && fundamental_freq > NOTAMIA-DELTA) {
             img_mia.setBackgroundResource(R.drawable.e_verde);
+            Toast.makeText(getApplicationContext(), "Nota afinada!!", Toast.LENGTH_SHORT).show();
+        }
         else {
             if (bool_btn_miA && fundamental_freq < RUIDO)
                 img_mia.setBackgroundResource(R.drawable.e);
@@ -586,8 +666,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Si
-        if(bool_btn_si && fundamental_freq < NOTASI+DELTA && fundamental_freq > NOTASI-DELTA)
+        if(bool_btn_si && fundamental_freq < NOTASI+DELTA && fundamental_freq > NOTASI-DELTA) {
             img_si.setBackgroundResource(R.drawable.b_verde);
+            Toast.makeText(getApplicationContext(), "Nota afinada!!", Toast.LENGTH_SHORT).show();
+        }
         else {
             if (bool_btn_si && fundamental_freq < RUIDO)
                 img_si.setBackgroundResource(R.drawable.b);
@@ -600,8 +682,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Sol
-        if(bool_btn_sol && fundamental_freq < NOTASOL+DELTA && fundamental_freq > NOTASOL-DELTA)
+        if(bool_btn_sol && fundamental_freq < NOTASOL+DELTA && fundamental_freq > NOTASOL-DELTA) {
             img_sol.setBackgroundResource(R.drawable.g_verde);
+            Toast.makeText(getApplicationContext(), "Nota afinada!!", Toast.LENGTH_SHORT).show();
+        }
         else {
             if (bool_btn_sol && fundamental_freq < RUIDO)
                 img_sol.setBackgroundResource(R.drawable.g);
@@ -614,8 +698,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Re
-        if(bool_btn_re && fundamental_freq < NOTARE+DELTA && fundamental_freq > NOTARE-DELTA)
+        if(bool_btn_re && fundamental_freq < NOTARE+DELTA && fundamental_freq > NOTARE-DELTA) {
             img_re.setBackgroundResource(R.drawable.d_verde);
+            Toast.makeText(getApplicationContext(), "Nota afinada!!", Toast.LENGTH_SHORT).show();
+        }
         else {
             if (bool_btn_re && fundamental_freq < RUIDO)
                 img_re.setBackgroundResource(R.drawable.d);
@@ -628,8 +714,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // La
-        if(bool_btn_la && fundamental_freq < NOTALA+DELTA && fundamental_freq > NOTALA-DELTA)
+        if(bool_btn_la && fundamental_freq < NOTALA+DELTA && fundamental_freq > NOTALA-DELTA) {
             img_la.setBackgroundResource(R.drawable.a_verde);
+            Toast.makeText(getApplicationContext(), "Nota afinada!!", Toast.LENGTH_SHORT).show();
+        }
         else {
             if (bool_btn_la && fundamental_freq < RUIDO)
                 img_la.setBackgroundResource(R.drawable.a);
@@ -642,8 +730,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Mi Grave
-        if(bool_btn_miG && fundamental_freq < NOTAMIG+DELTA && fundamental_freq > NOTAMIG-DELTA)
+        if(bool_btn_miG && fundamental_freq < NOTAMIG+DELTA && fundamental_freq > NOTAMIG-DELTA) {
             img_mig.setBackgroundResource(R.drawable.e_verde);
+            Toast.makeText(getApplicationContext(), "Nota afinada!!", Toast.LENGTH_SHORT).show();
+        }
         else {
             if (bool_btn_miG && fundamental_freq < RUIDO)
                 img_mig.setBackgroundResource(R.drawable.e);
